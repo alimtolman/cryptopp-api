@@ -7,7 +7,7 @@
  * Delete allocated in library byte array
  *
  * @note byte array MUST be allocated in library
- * 
+ *
  * @param bytes - byte array
  */
 extern "C" CRYPTOPP_EXPORT void delete_byte_array(const CryptoPP::byte* bytes);
@@ -79,6 +79,36 @@ extern "C" CRYPTOPP_EXPORT void aes_cfb_decrypt(const CryptoPP::byte* input_byte
  * @param output_bytes - pointer to byte array with defined size to store cipher data
  */
 extern "C" CRYPTOPP_EXPORT void aes_cfb_encrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes);
+
+/**
+ * Decrypt data with aes-ctr
+ *
+ * @note Caller MUST allocate for 'iv_bytes' 16 bytes
+ * @note Caller MUST allocate for 'output_bytes' same count of bytes as for 'input_bytes'
+ *
+ * @param input_bytes - byte array of cipher data
+ * @param input_size - size of 'input_bytes'
+ * @param key_bytes - key byte array
+ * @param key_size - size of 'key_bytes'
+ * @param iv_bytes - initialization vector byte array
+ * @param output_bytes - pointer to byte array with defined size to store decrypted data
+ */
+extern "C" CRYPTOPP_EXPORT void aes_ctr_decrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes);
+
+/**
+ * Encrypt data with aes-ctr
+ *
+ * @note Caller MUST allocate for 'iv_bytes' 16 bytes
+ * @note Caller MUST allocate for 'output_bytes' same count of bytes as for 'input_bytes'
+ *
+ * @param input_bytes - byte array of data to encrypt
+ * @param input_size - size of 'input_bytes'
+ * @param key_bytes - key byte array
+ * @param key_size - size of 'key_bytes'
+ * @param iv_bytes - initialization vector byte array
+ * @param output_bytes - pointer to byte array with defined size to store cipher data
+ */
+extern "C" CRYPTOPP_EXPORT void aes_ctr_encrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes);
 
 /**
  * Decrypt data with aes-ecb
@@ -242,6 +272,42 @@ extern "C" CRYPTOPP_EXPORT void blowfish_cbc_decrypt(const CryptoPP::byte* input
  * @param output_size - pointer to unsigned integer to store 'output_bytes' size
  */
 extern "C" CRYPTOPP_EXPORT void blowfish_cbc_encrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+#pragma endregion
+
+#pragma region camellia
+
+/**
+ * Decrypt data with camellia-cbc
+ *
+ * @note Caller MUST allocate for 'iv_bytes' 16 bytes
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of cipher data
+ * @param input_size - size of 'input_bytes'
+ * @param key_bytes - key byte array
+ * @param key_size - size of 'key_bytes'
+ * @param iv_bytes - initialization vector byte array
+ * @param output_bytes - pointer to null byte array to store decrypted data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void camellia_cbc_decrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Encrypt data with camellia-cbc
+ *
+ * @note Caller MUST allocate for 'iv_bytes' 16 bytes
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to encrypt
+ * @param input_size - size of 'input_bytes'
+ * @param key_bytes - key byte array
+ * @param key_size - size of 'key_bytes'
+ * @param iv_bytes - initialization vector byte array
+ * @param output_bytes - pointer to null byte array to store cipher data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void camellia_cbc_encrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const unsigned int key_size, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes, unsigned int* output_size);
 
 #pragma endregion
 
@@ -838,60 +904,6 @@ extern "C" CRYPTOPP_EXPORT void rsa_oaep_sha512_decrypt(const CryptoPP::byte* in
 extern "C" CRYPTOPP_EXPORT void rsa_oaep_sha512_encrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
 
 /**
- * Generate signature of data with rsa pss md2
- *
- * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
- *
- * @param input_bytes - byte array of data to sign
- * @param input_size - size of 'input_bytes'
- * @param private_key_bytes - private key byte array
- * @param private_key_size - size of 'private_key_bytes'
- * @param output_bytes - pointer to null byte array to store signature data
- * @param output_size - pointer to unsigned integer to store 'output_bytes' size
- */
-extern "C" CRYPTOPP_EXPORT void rsa_pss_md2_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
-
-/**
- * Verify signature of data with rsa pss md2
- *
- * @param input_bytes - byte array of data
- * @param input_size - size of 'input_bytes'
- * @param signature_bytes - byte array of signaturet
- * @param signature_size - size of 'signature_bytes'
- * @param public_key_bytes - public key byte array
- * @param public_key_size - size of 'public_key_bytes'
- * @param result - pointer to boolean to store result
- */
-extern "C" CRYPTOPP_EXPORT void rsa_pss_md2_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
-
-/**
- * Generate signature of data with rsa pss md5
- *
- * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
- *
- * @param input_bytes - byte array of data to sign
- * @param input_size - size of 'input_bytes'
- * @param private_key_bytes - key byte array
- * @param private_key_size - size of 'private_key_bytes'
- * @param output_bytes - pointer to null byte array to store signature data
- * @param output_size - pointer to unsigned integer to store 'output_bytes' size
- */
-extern "C" CRYPTOPP_EXPORT void rsa_pss_md5_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
-
-/**
- * Verify signature of data with rsa pss md5
- *
- * @param input_bytes - byte array of data
- * @param input_size - size of 'input_bytes'
- * @param signature_bytes - byte array of signaturet
- * @param signature_size - size of 'signature_bytes'
- * @param public_key_bytes - public key byte array
- * @param public_key_size - size of 'public_key_bytes'
- * @param result - pointer to boolean to store result
- */
-extern "C" CRYPTOPP_EXPORT void rsa_pss_md5_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
-
-/**
  * Generate signature of data with rsa pss sha1
  *
  * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
@@ -1025,6 +1037,196 @@ extern "C" CRYPTOPP_EXPORT void rsa_pss_sha512_sign(const CryptoPP::byte* input_
  * @param result - pointer to boolean to store result
  */
 extern "C" CRYPTOPP_EXPORT void rsa_pss_sha512_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+
+/**
+ * Generate signature of data with rsa pkcs v1 md2
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - private key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_md2_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 md2
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_md2_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 md5
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_md5_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 md5
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_md5_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 sha1
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha1_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 sha1
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha1_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 sha224
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha224_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 sha224
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha224_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 sha256
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha256_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 sha256
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha256_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 sha384
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha384_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 sha384
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha384_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+/**
+ * Generate signature of data with rsa pkcs v1 sha512
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - key byte array
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha512_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with rsa pkcs v1 sha512
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signaturet
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void rsa_sha512_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
 
 #pragma endregion
 
