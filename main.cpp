@@ -1,8 +1,10 @@
 #define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 
+#pragma warning(disable: 6386)
 #pragma warning(push, 0) 
 #include "aes.h"
 #include "blowfish.h"
+#include "camellia.h"
 #include "chacha.h"
 #include "dh.h"
 #include "ecp.h"
@@ -17,6 +19,7 @@
 #include "osrng.h"
 #include "poly1305.h"
 #include "pwdbased.h"
+#include "pssr.h"
 #include "rsa.h"
 #include "salsa.h"
 #include "sha.h"
@@ -92,6 +95,30 @@ void aes_cfb_encrypt(const byte* input_bytes, const unsigned int input_size, con
         (*output_bytes)[i] = static_cast<byte>(output_str.at(i));
 }
 
+void aes_ctr_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, byte** output_bytes) {
+    std::string output_str = "";
+
+    CTR_Mode<AES>::Decryption engine(key_bytes, key_size, iv_bytes);
+    StreamTransformationFilter stream(engine, new StringSink(output_str));
+    stream.Put(input_bytes, input_size);
+    stream.MessageEnd();
+
+    for (unsigned int i = 0; i < output_str.size(); ++i)
+        (*output_bytes)[i] = static_cast<byte>(output_str.at(i));
+}
+
+void aes_ctr_encrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, byte** output_bytes) {
+    std::string output_str = "";
+
+    CTR_Mode<AES>::Encryption engine(key_bytes, key_size, iv_bytes);
+    StreamTransformationFilter stream(engine, new StringSink(output_str));
+    stream.Put(input_bytes, input_size);
+    stream.MessageEnd();
+
+    for (unsigned int i = 0; i < output_str.size(); ++i)
+        (*output_bytes)[i] = static_cast<byte>(output_str.at(i));
+}
+
 void aes_ecb_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, byte** output_bytes, unsigned int* output_size, const bool zeros_padding = false) {
     std::string output_str = "";
     const BlockPaddingSchemeDef::BlockPaddingScheme padding = zeros_padding ? BlockPaddingSchemeDef::ZEROS_PADDING : BlockPaddingSchemeDef::PKCS_PADDING;
@@ -126,12 +153,13 @@ void aes_ecb_encrypt(const byte* input_bytes, const unsigned int input_size, con
 
 void aes_gcm_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, const unsigned int iv_size, byte** output_bytes, unsigned int* output_size) {
     std::string output_str = "";
+    int tag_size = 16;
 
     GCM<AES>::Decryption engine;
     engine.SetKeyWithIV(key_bytes, key_size, iv_bytes, iv_size);
-    AuthenticatedEncryptionFilter stream(engine, new StringSink(output_str));
-    stream.Put(input_bytes, input_size);
-    stream.MessageEnd();
+    AuthenticatedEncryptionFilter stream(engine, new StringSink(output_str), false, tag_size);
+    stream.ChannelPut("", input_bytes, input_size);
+    stream.ChannelMessageEnd("");
 
     *output_size = static_cast<unsigned int>(output_str.size());
     *output_bytes = new byte[output_str.size()];
@@ -142,12 +170,13 @@ void aes_gcm_decrypt(const byte* input_bytes, const unsigned int input_size, con
 
 void aes_gcm_encrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, const unsigned int iv_size, byte** output_bytes, unsigned int* output_size) {
     std::string output_str = "";
+    int tag_size = 16;
 
     GCM<AES>::Encryption engine;
     engine.SetKeyWithIV(key_bytes, key_size, iv_bytes, iv_size);
-    AuthenticatedEncryptionFilter stream(engine, new StringSink(output_str));
-    stream.Put(input_bytes, input_size);
-    stream.MessageEnd();
+    AuthenticatedEncryptionFilter stream(engine, new StringSink(output_str), false, tag_size);
+    stream.ChannelPut("", input_bytes, input_size);
+    stream.ChannelMessageEnd("");
 
     *output_size = static_cast<unsigned int>(output_str.size());
     *output_bytes = new byte[output_str.size()];
@@ -275,6 +304,38 @@ void blowfish_cbc_encrypt(const byte* input_bytes, const unsigned int input_size
 
 #pragma endregion
 
+#pragma region camellia
+
+void camellia_cbc_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, byte** output_bytes, unsigned int* output_size) {
+    std::string output_str = "";
+    CBC_Mode<Camellia>::Decryption engine(key_bytes, key_size, iv_bytes);
+    StreamTransformationFilter stream(engine, new StringSink(output_str));
+    stream.Put(input_bytes, input_size);
+    stream.MessageEnd();
+
+    *output_size = static_cast<unsigned int>(output_str.size());
+    *output_bytes = new byte[output_str.size()];
+
+    for (unsigned int i = 0; i < output_str.size(); ++i)
+        (*output_bytes)[i] = static_cast<byte>(output_str.at(i));
+}
+
+void camellia_cbc_encrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, byte** output_bytes, unsigned int* output_size) {
+    std::string output_str = "";
+    CBC_Mode<Camellia>::Encryption engine(key_bytes, key_size, iv_bytes);
+    StreamTransformationFilter stream(engine, new StringSink(output_str));
+    stream.Put(input_bytes, input_size);
+    stream.MessageEnd();
+
+    *output_size = static_cast<unsigned int>(output_str.size());
+    *output_bytes = new byte[output_str.size()];
+
+    for (unsigned int i = 0; i < output_str.size(); ++i)
+        (*output_bytes)[i] = static_cast<byte>(output_str.at(i));
+}
+
+#pragma endregion
+
 #pragma region chacha20
 
 void chacha20_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const unsigned int key_size, const byte* iv_bytes, byte** output_bytes) {
@@ -307,7 +368,7 @@ void dh_key_pair(const char* p_hex, const char* g_hex, byte** private_key_bytes,
     *public_key_size = dh.PublicKeyLength();
     *private_key_bytes = new byte[*private_key_size];
     *public_key_bytes = new byte[*public_key_size];
-    
+
     dh.GenerateKeyPair(rng, *private_key_bytes, *public_key_bytes);
 }
 
@@ -557,7 +618,7 @@ void rsa_ecb_decrypt(const byte* input_bytes, const unsigned int input_size, con
         unsigned int output_length = static_cast<unsigned int>(decryptor.MaxPlaintextLength(input_length));
         byte* output_block = new byte[output_length];
         output_length = static_cast<unsigned int>(decryptor.Decrypt(rng, &input_bytes[i], input_length, output_block).messageLength);
-    
+
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
@@ -606,7 +667,7 @@ void rsa_export_public_key(const byte* private_key_bytes, const unsigned int pri
 
     private_key.Load(buffer);
     public_key.Initialize(private_key.GetModulus(), private_key.GetPublicExponent());
-    
+
     buffer.Clear();
     public_key.Save(buffer);
 
@@ -1126,7 +1187,117 @@ void rsa_oaep_sha512_encrypt(const byte* input_bytes, const unsigned int input_s
     buffer.Get(*output_bytes, *output_size);
 }
 
-void rsa_pss_md2_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_pss_sha1_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    RSASS<PSS, SHA1>::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void rsa_pss_sha1_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    RSASS<PSS, SHA1>::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+void rsa_pss_sha224_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    RSASS<PSS, SHA224>::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void rsa_pss_sha224_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    RSASS<PSS, SHA224>::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+void rsa_pss_sha256_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    RSASS<PSS, SHA256>::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void rsa_pss_sha256_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    RSASS<PSS, SHA256>::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+void rsa_pss_sha384_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    RSASS<PSS, SHA384>::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void rsa_pss_sha384_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    RSASS<PSS, SHA384>::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+void rsa_pss_sha512_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    RSASS<PSS, SHA512>::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void rsa_pss_sha512_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    RSASS<PSS, SHA512>::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+void rsa_md2_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, Weak::MD2>::Signer signer;
@@ -1138,7 +1309,7 @@ void rsa_pss_md2_sign(const byte* input_bytes, const unsigned int input_size, co
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_md2_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_md2_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, Weak::MD2>::Verifier verifier;
 
@@ -1148,7 +1319,7 @@ void rsa_pss_md2_verify(const byte* input_bytes, const unsigned int input_size, 
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_md5_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_md5_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, Weak::MD5>::Signer signer;
@@ -1160,7 +1331,7 @@ void rsa_pss_md5_sign(const byte* input_bytes, const unsigned int input_size, co
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_md5_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_md5_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, Weak::MD5>::Verifier verifier;
 
@@ -1170,7 +1341,7 @@ void rsa_pss_md5_verify(const byte* input_bytes, const unsigned int input_size, 
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_sha1_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_sha1_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, SHA1>::Signer signer;
@@ -1182,7 +1353,7 @@ void rsa_pss_sha1_sign(const byte* input_bytes, const unsigned int input_size, c
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_sha1_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_sha1_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, SHA1>::Verifier verifier;
 
@@ -1192,7 +1363,7 @@ void rsa_pss_sha1_verify(const byte* input_bytes, const unsigned int input_size,
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_sha224_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_sha224_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, SHA224>::Signer signer;
@@ -1204,7 +1375,7 @@ void rsa_pss_sha224_sign(const byte* input_bytes, const unsigned int input_size,
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_sha224_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_sha224_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, SHA224>::Verifier verifier;
 
@@ -1214,7 +1385,7 @@ void rsa_pss_sha224_verify(const byte* input_bytes, const unsigned int input_siz
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_sha256_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_sha256_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, SHA256>::Signer signer;
@@ -1226,7 +1397,7 @@ void rsa_pss_sha256_sign(const byte* input_bytes, const unsigned int input_size,
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_sha256_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_sha256_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, SHA256>::Verifier verifier;
 
@@ -1236,7 +1407,7 @@ void rsa_pss_sha256_verify(const byte* input_bytes, const unsigned int input_siz
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_sha384_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_sha384_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, SHA384>::Signer signer;
@@ -1248,7 +1419,7 @@ void rsa_pss_sha384_sign(const byte* input_bytes, const unsigned int input_size,
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_sha384_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_sha384_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, SHA384>::Verifier verifier;
 
@@ -1258,7 +1429,7 @@ void rsa_pss_sha384_verify(const byte* input_bytes, const unsigned int input_siz
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
 
-void rsa_pss_sha512_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+void rsa_sha512_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
     ByteQueue buffer;
     AutoSeededRandomPool rng;
     RSASS<PKCS1v15, SHA512>::Signer signer;
@@ -1270,7 +1441,7 @@ void rsa_pss_sha512_sign(const byte* input_bytes, const unsigned int input_size,
     *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
 }
 
-void rsa_pss_sha512_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+void rsa_sha512_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
     ByteQueue buffer;
     RSASS<PKCS1v15, SHA512>::Verifier verifier;
 
@@ -1346,7 +1517,7 @@ void xsalsa20_poly1305_tls_encrypt(const byte* input_bytes, const unsigned int i
     byte* encrypted_bytes = new byte[input_size];
     byte* hash_bytes = new byte[Poly1305TLS::DIGESTSIZE];
     byte sub_key_bytes[Poly1305TLS::KEYLENGTH] = {};
-    
+
     XSalsa20::Encryption engine;
 
     engine.SetKeyWithIV(key_bytes, XSalsa20::KEYLENGTH, iv_bytes, XSalsa20::IV_LENGTH);
