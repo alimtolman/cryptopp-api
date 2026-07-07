@@ -495,6 +495,64 @@ extern "C" CRYPTOPP_EXPORT void ecdsa_sha256_verify(const CryptoPP::byte* input_
 
 #pragma endregion
 
+#pragma region ed25519
+
+/**
+ * Export public key from private key
+ *
+ * @note 'private_key_bytes' is expected to be a PKCS8 DER-encoded ed25519 private key
+ * @note Caller MUST delete 'public_key_bytes' with helper function 'delete_byte_array'
+ *
+ * @param private_key_bytes - private key byte array (PKCS8 DER encoded)
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param public_key_bytes - pointer to null byte array to store public key (X.509 DER encoded)
+ * @param public_key_size - pointer to unsigned integer to store 'public_key_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void ed25519_export_public_key(const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** public_key_bytes, unsigned int* public_key_size);
+
+/**
+ * Generate ed25519 key pair
+ *
+ * @note Returned keys are PKCS8 / X.509 DER encoded
+ * @note Caller MUST delete 'private_key_bytes' with helper function 'delete_byte_array'
+ * @note Caller MUST delete 'public_key_bytes' with helper function 'delete_byte_array'
+ *
+ * @param private_key_bytes - pointer to null byte array to store private key
+ * @param private_key_size - pointer to unsigned integer to store 'private_key_bytes' size
+ * @param public_key_bytes - pointer to null byte array to store public key
+ * @param public_key_size - pointer to unsigned integer to store 'public_key_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void ed25519_key_pair(CryptoPP::byte** private_key_bytes, unsigned int* private_key_size, CryptoPP::byte** public_key_bytes, unsigned int* public_key_size);
+
+/**
+ * Generate signature of data with ed25519
+ *
+ * @note Caller MUST delete 'output_bytes' with helper function 'delete_byte_array'
+ *
+ * @param input_bytes - byte array of data to sign
+ * @param input_size - size of 'input_bytes'
+ * @param private_key_bytes - private key byte array (PKCS8 DER encoded)
+ * @param private_key_size - size of 'private_key_bytes'
+ * @param output_bytes - pointer to null byte array to store signature data
+ * @param output_size - pointer to unsigned integer to store 'output_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void ed25519_sign(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* private_key_bytes, const unsigned int private_key_size, CryptoPP::byte** output_bytes, unsigned int* output_size);
+
+/**
+ * Verify signature of data with ed25519
+ *
+ * @param input_bytes - byte array of data
+ * @param input_size - size of 'input_bytes'
+ * @param signature_bytes - byte array of signature
+ * @param signature_size - size of 'signature_bytes'
+ * @param public_key_bytes - public key byte array (X.509 DER encoded)
+ * @param public_key_size - size of 'public_key_bytes'
+ * @param result - pointer to boolean to store result
+ */
+extern "C" CRYPTOPP_EXPORT void ed25519_verify(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* signature_bytes, const unsigned int signature_size, const CryptoPP::byte* public_key_bytes, const unsigned int public_key_size, bool* result);
+
+#pragma endregion
+
 #pragma region hash
 
 /**
@@ -1266,6 +1324,35 @@ extern "C" CRYPTOPP_EXPORT void salsa20_encrypt(const CryptoPP::byte* input_byte
 
 #pragma endregion
 
+#pragma region x25519
+
+/**
+ * Generate public and private keys
+ *
+ * @note Caller MUST delete 'private_key_bytes' with helper function 'delete_byte_array'
+ * @note Caller MUST delete 'public_key_bytes' with helper function 'delete_byte_array'
+ *
+ * @param private_key_bytes - pointer to null byte array to store private key
+ * @param private_key_size - pointer to unsigned integer to store 'private_key_bytes' size
+ * @param public_key_bytes - pointer to null byte array to store public key
+ * @param public_key_size - pointer to unsigned integer to store 'public_key_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void x25519_key_pair(CryptoPP::byte** private_key_bytes, unsigned int* private_key_size, CryptoPP::byte** public_key_bytes, unsigned int* public_key_size);
+
+/**
+ * Generate shared key
+ *
+ * @note Caller MUST delete 'shared_key_bytes' with helper function 'delete_byte_array'
+ *
+ * @param private_key_bytes - private key byte array
+ * @param other_public_key_bytes - other public key byte array
+ * @param shared_key_bytes - pointer to null byte array to store shared key
+ * @param shared_key_size - pointer to unsigned integer to store 'shared_key_bytes' size
+ */
+extern "C" CRYPTOPP_EXPORT void x25519_shared_key(const CryptoPP::byte* private_key_bytes, const CryptoPP::byte* other_public_key_bytes, CryptoPP::byte** shared_key_bytes, unsigned int* shared_key_size);
+
+#pragma endregion
+
 #pragma region xsalsa20
 
 /**
@@ -1304,15 +1391,19 @@ extern "C" CRYPTOPP_EXPORT void xsalsa20_encrypt(const CryptoPP::byte* input_byt
  * @note Caller MUST allocate for 'key_bytes' 32 bytes
  * @note Caller MUST allocate for 'iv_bytes' 24 bytes
  * @note Caller MUST allocate 'output_bytes' with size 'input_size - 16'
+ * @note If verification fails, 'output_bytes' is zero-filled and 'verified' is set to false;
+ *       callers MUST check 'verified' rather than assuming decryption succeeded
+ * @note MAC comparison is performed in constant time
  *
  * @param input_bytes - byte array of cipher data
  * @param input_size - size of 'input_bytes'
  * @param key_bytes - key byte array
  * @param iv_bytes - initialization vector byte array
  * @param output_bytes - pointer to byte array with defined size to store decrypted data
+ * @param verified - pointer to boolean to store whether the poly1305 hash matched (always true when 'verify' is false)
  * @param verify - define verification for poly1305 hash, default value = true
  */
-extern "C" CRYPTOPP_EXPORT void xsalsa20_poly1305_tls_decrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes, const bool verify);
+extern "C" CRYPTOPP_EXPORT void xsalsa20_poly1305_tls_decrypt(const CryptoPP::byte* input_bytes, const unsigned int input_size, const CryptoPP::byte* key_bytes, const CryptoPP::byte* iv_bytes, CryptoPP::byte** output_bytes, bool* verified, const bool verify);
 
 /**
  * Encrypt data with xsalsa20 and calculate poly1305 (IETF's variant) hash
