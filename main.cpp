@@ -23,6 +23,7 @@
 #include "rsa.h"
 #include "salsa.h"
 #include "sha.h"
+#include "xed25519.h"
 #pragma warning(pop)
 
 #include "main.h"
@@ -548,6 +549,74 @@ void ecdsa_sha256_verify(const byte* input_bytes, const unsigned int input_size,
 
     buffer.Put(public_key_bytes, public_key_size);
     verifier.AccessKey().Load(buffer);
+
+    *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
+}
+
+#pragma endregion
+
+#pragma region ed25519
+
+void ed25519_export_public_key(const byte* private_key_bytes, const unsigned int private_key_size, byte** public_key_bytes, unsigned int* public_key_size) {
+    ByteQueue buffer;
+    ed25519::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessPrivateKey().Load(buffer);
+
+    ed25519::Verifier verifier(signer);
+
+    buffer.Clear();
+    verifier.GetPublicKey().Save(buffer);
+
+    *public_key_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
+    *public_key_bytes = new byte[*public_key_size];
+
+    buffer.Get(*public_key_bytes, *public_key_size);
+}
+
+void ed25519_key_pair(byte** private_key_bytes, unsigned int* private_key_size, byte** public_key_bytes, unsigned int* public_key_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    ed25519::Signer signer;
+
+    signer.AccessPrivateKey().GenerateRandom(rng);
+    signer.GetPrivateKey().Save(buffer);
+
+    *private_key_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
+    *private_key_bytes = new byte[*private_key_size];
+
+    buffer.Get(*private_key_bytes, *private_key_size);
+
+    ed25519::Verifier verifier(signer);
+
+    buffer.Clear();
+    verifier.GetPublicKey().Save(buffer);
+
+    *public_key_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
+    *public_key_bytes = new byte[*public_key_size];
+
+    buffer.Get(*public_key_bytes, *public_key_size);
+}
+
+void ed25519_sign(const byte* input_bytes, const unsigned int input_size, const byte* private_key_bytes, const unsigned int private_key_size, byte** output_bytes, unsigned int* output_size) {
+    ByteQueue buffer;
+    AutoSeededRandomPool rng;
+    ed25519::Signer signer;
+
+    buffer.Put(private_key_bytes, private_key_size);
+    signer.AccessPrivateKey().Load(buffer);
+
+    *output_bytes = new byte[signer.MaxSignatureLength()];
+    *output_size = static_cast<unsigned int>(signer.SignMessage(rng, input_bytes, input_size, *output_bytes));
+}
+
+void ed25519_verify(const byte* input_bytes, const unsigned int input_size, const byte* signature_bytes, const unsigned int signature_size, const byte* public_key_bytes, const unsigned int public_key_size, bool* result) {
+    ByteQueue buffer;
+    ed25519::Verifier verifier;
+
+    buffer.Put(public_key_bytes, public_key_size);
+    verifier.AccessPublicKey().Load(buffer);
 
     *result = verifier.VerifyMessage(input_bytes, input_size, signature_bytes, signature_size);
 }
@@ -1471,6 +1540,33 @@ void salsa20_encrypt(const byte* input_bytes, const unsigned int input_size, con
 
 #pragma endregion
 
+#pragma region x25519
+
+void x25519_key_pair(byte** private_key_bytes, unsigned int* private_key_size, byte** public_key_bytes, unsigned int* public_key_size) {
+    AutoSeededRandomPool rng;
+    x25519 kex;
+
+    *private_key_size = x25519::SECRET_KEYLENGTH;
+    *public_key_size = x25519::PUBLIC_KEYLENGTH;
+    *private_key_bytes = new byte[*private_key_size];
+    *public_key_bytes = new byte[*public_key_size];
+
+    kex.GeneratePrivateKey(rng, *private_key_bytes);
+    kex.GeneratePublicKey(rng, *private_key_bytes, *public_key_bytes);
+}
+
+void x25519_shared_key(const byte* private_key_bytes, const byte* other_public_key_bytes, byte** shared_key_bytes, unsigned int* shared_key_size) {
+    x25519 kex;
+
+    *shared_key_size = x25519::SHARED_KEYLENGTH;
+    *shared_key_bytes = new byte[*shared_key_size];
+
+    if (!kex.Agree(*shared_key_bytes, private_key_bytes, other_public_key_bytes))
+        memset(*shared_key_bytes, 0, *shared_key_size);
+}
+
+#pragma endregion
+
 #pragma region xsalsa20
 
 void xsalsa20_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const byte* iv_bytes, byte** output_bytes) {
@@ -1487,7 +1583,7 @@ void xsalsa20_encrypt(const byte* input_bytes, const unsigned int input_size, co
     engine.ProcessData(*output_bytes, input_bytes, input_size);
 }
 
-void xsalsa20_poly1305_tls_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const byte* iv_bytes, byte** output_bytes, const bool verify = true) {
+void xsalsa20_poly1305_tls_decrypt(const byte* input_bytes, const unsigned int input_size, const byte* key_bytes, const byte* iv_bytes, byte** output_bytes, bool* verified, const bool verify = true) {
     const unsigned int encrypted_size = input_size - Poly1305TLS::DIGESTSIZE;
     byte* encrypted_bytes = new byte[encrypted_size];
     byte* main_hash_bytes = new byte[Poly1305TLS::DIGESTSIZE];
@@ -1502,11 +1598,18 @@ void xsalsa20_poly1305_tls_decrypt(const byte* input_bytes, const unsigned int i
     engine.SetKeyWithIV(key_bytes, XSalsa20::KEYLENGTH, iv_bytes, XSalsa20::IV_LENGTH);
     engine.ProcessData(sub_key_bytes, sub_key_bytes, Poly1305TLS::KEYLENGTH);
 
-    if (verify)
-        poly1305_tls(encrypted_bytes, encrypted_size, sub_key_bytes, &main_hash_bytes);
+    *verified = true;
 
-    if (!verify || (memcmp(main_hash_bytes, other_hash_bytes, Poly1305TLS::DIGESTSIZE) == 0))
+    if (verify) {
+        poly1305_tls(encrypted_bytes, encrypted_size, sub_key_bytes, &main_hash_bytes);
+        // Constant-time comparison to avoid leaking MAC-matching progress via timing.
+        *verified = VerifyBufsEqual(main_hash_bytes, other_hash_bytes, Poly1305TLS::DIGESTSIZE);
+    }
+
+    if (*verified)
         engine.ProcessData(*output_bytes, encrypted_bytes, encrypted_size);
+    else
+        memset(*output_bytes, 0, encrypted_size);
 
     delete[] encrypted_bytes;
     delete[] main_hash_bytes;
