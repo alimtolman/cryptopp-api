@@ -709,17 +709,23 @@ void rsa_ecb_encrypt(const byte* input_bytes, const unsigned int input_size, con
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -797,8 +803,9 @@ void rsa_no_padding_encrypt(const byte* input_bytes, const unsigned int input_si
     buffer.Put(public_key_bytes, public_key_size);
     public_key.Load(buffer);
     buffer.Clear();
-
-    Integer encrypted = public_key.ApplyFunction(Integer(input_bytes, input_size));
+    
+    Integer plaintext = input_size ? Integer(input_bytes, input_size) : Integer(0);
+    Integer encrypted = public_key.ApplyFunction(plaintext);
 
     encrypted.Encode(buffer, encrypted.ByteCount());
 
@@ -846,17 +853,23 @@ void rsa_oaep_md2_encrypt(const byte* input_bytes, const unsigned int input_size
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -902,17 +915,23 @@ void rsa_oaep_md4_encrypt(const byte* input_bytes, const unsigned int input_size
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -958,17 +977,23 @@ void rsa_oaep_md5_encrypt(const byte* input_bytes, const unsigned int input_size
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -1014,17 +1039,23 @@ void rsa_oaep_sha1_encrypt(const byte* input_bytes, const unsigned int input_siz
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -1070,17 +1101,23 @@ void rsa_oaep_sha224_encrypt(const byte* input_bytes, const unsigned int input_s
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -1126,17 +1163,23 @@ void rsa_oaep_sha256_encrypt(const byte* input_bytes, const unsigned int input_s
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -1182,17 +1225,23 @@ void rsa_oaep_sha384_encrypt(const byte* input_bytes, const unsigned int input_s
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
@@ -1238,17 +1287,23 @@ void rsa_oaep_sha512_encrypt(const byte* input_bytes, const unsigned int input_s
     buffer.Clear();
 
     unsigned int block_size = static_cast<unsigned int>(encryptor.FixedMaxPlaintextLength());
-
-    for (unsigned int i = 0; i < input_size; i += block_size) {
+    unsigned int i = 0;
+    
+    // Empty plaintext is valid: still emit one padded ciphertext block.
+    do {
         unsigned int input_length = i + block_size > input_size ? input_size - i : block_size;
         unsigned int output_length = static_cast<unsigned int>(encryptor.CiphertextLength(input_length));
         byte* output_block = new byte[output_length];
 
-        encryptor.Encrypt(rng, &input_bytes[i], input_length, output_block);
+        encryptor.Encrypt(rng, input_length ? &input_bytes[i] : input_bytes, input_length, output_block);
         buffer.Put(output_block, output_length);
 
         delete[] output_block;
-    }
+
+        if (input_size == 0)
+            break;
+        i += block_size;
+    } while (i < input_size);
 
     *output_size = static_cast<unsigned int>(buffer.TotalBytesRetrievable());
     *output_bytes = new byte[*output_size];
